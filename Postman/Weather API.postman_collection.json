@@ -1,0 +1,106 @@
+{
+	"info": {
+		"_postman_id": "ab978be9-cfbd-4474-8b99-b4323a22cb05",
+		"name": "Weather API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "3035299"
+	},
+	"item": [
+		{
+			"name": "Get weather by city",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:9000/v1/weather/city/{{city}}",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9000",
+					"path": [
+						"v1",
+						"weather",
+						"city",
+						"{{city}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get weather by country",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:9000/v1/weather/country/{{countryCode}}",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9000",
+					"path": [
+						"v1",
+						"weather",
+						"country",
+						"{{countryCode}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create city",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\":\"{{city}}\",\n    \"countryCode\":\"{{countryCode}}\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:9000/v1/weather/city",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9000",
+					"path": [
+						"v1",
+						"weather",
+						"city"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete city",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:9000/v1/weather/city/london",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9000",
+					"path": [
+						"v1",
+						"weather",
+						"city",
+						"london"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
