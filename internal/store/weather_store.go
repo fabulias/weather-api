@@ -13,14 +13,15 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type WeatherStore interface {
-	CreateCity(ctx *gin.Context, city *entities.City) (*entities.City, error)
-	DeleteCityAndWeatherData(ctx *gin.Context, cityID int64) error
-	GetCity(ctx *gin.Context, citySearch string) (*entities.City, error)
+var _ WeatherStore = (*WeatherPostgresStore)(nil)
 
-	CreateWeatherData(ctx *gin.Context, weatherData *entities.WeatherData) (*entities.WeatherData, error) // migrate this to trx way like Delete
-	UpdateWeatherData(ctx *gin.Context, weatherData *entities.WeatherData) (*entities.WeatherData, error)
+type WeatherStore interface {
+	CreateCityAndWeatherData(ctx *gin.Context, city *entities.City, weatherData *entities.WeatherData) (*entities.City, *entities.WeatherData, error)
+	DeleteCityAndWeatherData(ctx *gin.Context, cityID int64) error
+
+	GetCity(ctx *gin.Context, citySearch string) (*entities.City, error)
 	GetWeatherDataByCountryCode(ctx context.Context, countryCode string) ([]*entities.WeatherData, error)
+	UpdateWeatherData(ctx *gin.Context, weatherData *entities.WeatherData) (*entities.WeatherData, error)
 }
 
 type WeatherPostgresStore struct {
@@ -68,7 +69,20 @@ func (w *WeatherPostgresStore) GetCity(ctx *gin.Context, citySearch string) (*en
 	return &city, nil
 }
 
-func (w *WeatherPostgresStore) CreateCity(ctx *gin.Context, city *entities.City) (*entities.City, error) {
+func (w *WeatherPostgresStore) CreateCityAndWeatherData(ctx *gin.Context, city *entities.City, weatherData *entities.WeatherData) (*entities.City, *entities.WeatherData, error) {
+	tx, err := w.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to begin transaction: %v", err)
+	}
+
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		} else {
+			_ = tx.Commit()
+		}
+	}()
+
 	query, args, err := sq.
 		Insert("cities").
 		Columns("name", "country_code").
@@ -77,19 +91,16 @@ func (w *WeatherPostgresStore) CreateCity(ctx *gin.Context, city *entities.City)
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {
-		return nil, err
+		return nil, nil, fmt.Errorf("failed to create city query: %v", err)
 	}
 
-	ans := entities.City{}
-	err = w.db.QueryRowxContext(ctx, query, args...).StructScan(&ans)
-	if err != nil {
-		return nil, fmt.Errorf("error creating city: %v", err)
+	var insertedCity entities.City
+	if err = tx.QueryRowxContext(ctx, query, args...).StructScan(&insertedCity); err != nil {
+		return nil, nil, fmt.Errorf("failed to create city: %v", err)
 	}
-	return &ans, nil
-}
 
-func (w *WeatherPostgresStore) CreateWeatherData(ctx *gin.Context, weatherData *entities.WeatherData) (*entities.WeatherData, error) {
-	query, args, err := sq.
+	weatherData.CityID = insertedCity.ID // Set city ID from inserted city
+	query, args, err = sq.
 		Insert("weather_data").
 		Columns(
 			"city_id",
@@ -123,15 +134,15 @@ func (w *WeatherPostgresStore) CreateWeatherData(ctx *gin.Context, weatherData *
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {
-		return nil, err
+		return nil, nil, fmt.Errorf("failed to create weather data query: %v", err)
 	}
 
-	ans := entities.WeatherData{}
-	err = w.db.QueryRowxContext(ctx, query, args...).StructScan(&ans)
-	if err != nil {
-		return nil, fmt.Errorf("error creating weather data: %v", err)
+	var insertedWeatherData entities.WeatherData
+	if err = tx.QueryRowxContext(ctx, query, args...).StructScan(&insertedWeatherData); err != nil {
+		return nil, nil, fmt.Errorf("failed to create weather data: %v", err)
 	}
-	return &ans, nil
+
+	return &insertedCity, &insertedWeatherData, nil
 }
 
 func (w *WeatherPostgresStore) UpdateWeatherData(ctx *gin.Context, weatherData *entities.WeatherData) (*entities.WeatherData, error) {

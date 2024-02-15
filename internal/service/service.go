@@ -109,22 +109,15 @@ func (w *WeatherService) CreateCity(ctx *gin.Context, city *entities.City) (*ent
 	if err != nil {
 		return nil, err
 	}
-
-	cityResp, err := w.store.CreateCity(ctx, city)
-	if err != nil {
-		return nil, err
-	}
-
-	wd := &entities.WeatherData{
-		CityID: cityResp.ID,
-	}
+	wd := &entities.WeatherData{}
 	wd.CopyFromWeatherResp(weatherResp)
 
-	_, err = w.store.CreateWeatherData(ctx, wd)
+	insertedCity, _, err := w.store.CreateCityAndWeatherData(ctx, city, wd)
 	if err != nil {
 		return nil, err
 	}
-	return cityResp, nil
+
+	return insertedCity, nil
 }
 func (w *WeatherService) DeleteCity(ctx *gin.Context, cityName string) error {
 	city, err := w.store.GetCity(ctx, cityName)
