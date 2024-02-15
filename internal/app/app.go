@@ -37,8 +37,8 @@ func NewServer(cfg config.Config, logger *zap.Logger) (*App, error) {
 		Timeout: 1 * time.Minute,
 	}
 
-	userService := service.NewWeatherService(postgresStore, httpClient, cfg.ApiKey)
-	weatherHandlers := handlers.NewWeatherHandlers(userService)
+	weatherService := service.NewWeatherService(postgresStore, httpClient, cfg.ApiKey)
+	weatherHandlers := handlers.NewWeatherHandlers(weatherService)
 
 	v1Group.GET("/health", weatherHandlers.GetHealth)
 	v1Group.GET("/weather/city/:city", weatherHandlers.GetWeatherByCity)
